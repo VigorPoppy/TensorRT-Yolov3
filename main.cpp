@@ -24,19 +24,39 @@ vector<float> prepareImage(cv::Mat& img)
     auto scaleSize = cv::Size(img.cols * scale,img.rows * scale);
 
     cv::Mat rgb ;
-    cv::cvtColor(img, rgb, CV_BGR2RGB);
+    rgb = img;
     cv::Mat resized;
-    cv::resize(rgb, resized,scaleSize,0,0,INTER_CUBIC);
+    cv::resize(rgb, resized,scaleSize,0,0,INTER_LINEAR);
+    //cv::Mat cropped;
+    //cv::resize(rgb, cropped,scaleSize);
 
-    cv::Mat cropped(h, w,CV_8UC3, 127);
+    cv::Mat cropped(h, w,CV_8UC3, cv::Scalar(0,0,0));
+
     Rect rect((w- scaleSize.width)/2, (h-scaleSize.height)/2, scaleSize.width,scaleSize.height); 
     resized.copyTo(cropped(rect));
 
+    // normalized and subtract mean value
+    cv::Mat img_float_t;
     cv::Mat img_float;
     if (c == 3)
-        cropped.convertTo(img_float, CV_32FC3, 1/255.0);
+        cropped.convertTo(img_float_t, CV_32FC3, 2/255.0);
     else
-        cropped.convertTo(img_float, CV_32FC1 ,1/255.0);
+        cropped.convertTo(img_float_t, CV_32FC1 ,2/255.0);
+
+    vector<float> values = {0.5,0.5,0.5};
+
+    std::vector<cv::Mat> channels;
+
+    for(int i=0; i<3; ++i){
+        cv::Mat channel(h, w, CV_32FC1, cv::Scalar(values[i]));
+        channels.push_back(channel);
+    }
+    cv::Mat mean_;
+    cv::merge(channels, mean_);
+
+    cv::subtract(img_float_t, mean_, img_float);
+    //cout << img_float << endl;
+    // process end
 
     //HWC TO CHW
     vector<Mat> input_channels(c);
